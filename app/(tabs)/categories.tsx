@@ -1,24 +1,34 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { router } from "expo-router";
+import { useState } from "react";
+import {
+  Alert,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
 
-import { Colors, suggestCategoryColor } from '@/components/colors';
-import { ColorSwatchPicker } from '@/components/customs/ColorSwatchPicker';
-import { AppFonts } from '@/components/fonts';
-import { EmptyList } from '@/components/EmptyList';
-import { CategoryListItem } from '@/components/Lists/CategoryListItem';
-import { useTasks } from '@/contexts/TasksProvider';
-import { common } from '@/styles/common';
-import { Radius, Spacing } from '@/styles/layout';
-import type { Category, CategoryColorId } from '@/types/task';
+import { Colors, suggestCategoryColor } from "@/components/colors";
+import { ColorSwatchPicker } from "@/components/customs/ColorSwatchPicker";
+import { EmptyList } from "@/components/EmptyList";
+import { AppFonts } from "@/components/fonts";
+import { CategoryListItem } from "@/components/Lists/CategoryListItem";
+import { useTasks } from "@/contexts/TasksProvider";
+import { common } from "@/styles/common";
+import { Radius, Spacing } from "@/styles/layout";
+import type { Category, CategoryColorId } from "@/types/task";
 
 export default function CategoriesScreen() {
   const { categories, tasks, createCategory, deleteCategory } = useTasks();
-  const [name, setName] = useState('');
-  const [color, setColor] = useState<CategoryColorId>(() => suggestCategoryColor(categories));
+  const [name, setName] = useState("");
+  const [color, setColor] = useState<CategoryColorId>(() =>
+    suggestCategoryColor(categories),
+  );
   const [submitting, setSubmitting] = useState(false);
 
   const taskCounts: Record<string, number> = {};
@@ -38,45 +48,45 @@ export default function CategoriesScreen() {
       (category) => category.name.toLowerCase() === trimmed.toLowerCase(),
     );
     if (exists) {
-      Toast.show({ type: 'error', text1: 'That category already exists' });
+      Toast.show({ type: "error", text1: "That category already exists" });
       return;
     }
 
     setSubmitting(true);
     try {
       const created = await createCategory({ name: trimmed, color });
-      setName('');
+      setName("");
       setColor(suggestCategoryColor([...categories, created]));
-      Toast.show({ type: 'success', text1: 'Category added' });
+      Toast.show({ type: "success", text1: "Category added" });
     } catch {
-      Toast.show({ type: 'error', text1: 'Couldn’t add category' });
+      Toast.show({ type: "error", text1: "Couldn’t add category" });
     } finally {
       setSubmitting(false);
     }
   }
 
   function handlePressCategory(category: Category) {
-    router.push({ pathname: '/category/[id]', params: { id: category.id } });
+    router.push({ pathname: "/category/[id]", params: { id: category.id } });
   }
 
   function handleDeleteCategory(category: Category) {
     const count = taskCounts[category.id] ?? 0;
     const message =
       count > 0
-        ? `Delete “${category.name}”? ${count} task${count === 1 ? '' : 's'} will become uncategorised.`
+        ? `Delete “${category.name}”? ${count} task${count === 1 ? "" : "s"} will become uncategorised.`
         : `Delete “${category.name}”? This can’t be undone.`;
 
-    Alert.alert('Delete category', message, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert("Delete category", message, [
+      { text: "Cancel", style: "cancel" },
       {
-        text: 'Delete',
-        style: 'destructive',
+        text: "Delete",
+        style: "destructive",
         onPress: async () => {
           try {
             await deleteCategory(category.id);
-            Toast.show({ type: 'success', text1: 'Category deleted' });
+            Toast.show({ type: "success", text1: "Category deleted" });
           } catch {
-            Toast.show({ type: 'error', text1: 'Couldn’t delete category' });
+            Toast.show({ type: "error", text1: "Couldn’t delete category" });
           }
         },
       },
@@ -95,7 +105,7 @@ export default function CategoriesScreen() {
   }
 
   return (
-    <SafeAreaView style={common.screen} edges={['top']}>
+    <SafeAreaView style={common.screen} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.eyebrow}>{categories.length} in use</Text>
         <Text style={styles.title}>Categories</Text>
@@ -103,7 +113,11 @@ export default function CategoriesScreen() {
 
       <View style={styles.addRow}>
         <View style={styles.inputWrap}>
-          <Ionicons name="pricetag-outline" size={18} color={Colors.textSubtle} />
+          <Ionicons
+            name="pricetag-outline"
+            size={18}
+            color={Colors.textSubtle}
+          />
           <TextInput
             style={styles.input}
             placeholder="New category name"
@@ -124,8 +138,9 @@ export default function CategoriesScreen() {
             styles.addButton,
             !canAdd && styles.addButtonDisabled,
             pressed && canAdd && styles.addButtonPressed,
-          ]}>
-          <Ionicons name="add" size={26} color="#fff" />
+          ]}
+        >
+          <Ionicons name="add" size={26} color="#ffffff" />
         </Pressable>
       </View>
 
@@ -175,14 +190,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   addRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: Spacing.sm,
     paddingHorizontal: Spacing.lg,
     marginTop: Spacing.lg,
   },
   colorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.md,
     paddingHorizontal: Spacing.lg,
     marginTop: Spacing.md,
@@ -194,8 +209,8 @@ const styles = StyleSheet.create({
   },
   inputWrap: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.sm,
     height: 50,
     paddingHorizontal: Spacing.md,
@@ -216,8 +231,8 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: Radius.md,
     backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   addButtonDisabled: {
     backgroundColor: Colors.borderStrong,
