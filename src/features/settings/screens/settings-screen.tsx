@@ -25,6 +25,7 @@ import { REMINDER_PRESETS } from "@/features/notifications/types";
 import { SEED_PREFIX, generateSeedTasks } from "@/features/settings/dev-seed";
 import { settingsChanged } from "@/features/settings/store";
 import { THEME_MODES, type ThemeMode } from "@/features/settings/types";
+import { CloudSyncCard } from "@/features/sync";
 import { tasksBulkAdded, tasksBulkRemoved } from "@/features/tasks/store";
 import type { RootState } from "@/lib/store/create-store";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
@@ -234,6 +235,8 @@ export function SettingsScreen() {
           <Button label="Import data" icon="download-outline" variant="secondary" loading={busy === "import"} onPress={doImport} />
         </View>
       </Card>
+
+      <CloudSyncCard />
 
       {__DEV__ ? (
         <Card title="Developer" icon="code-slash" tint="orange">
