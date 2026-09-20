@@ -1,569 +1,445 @@
-# Task Manager (React Native / Expo)
+<a name="top"></a>
 
-A small offline-first task manager: create tasks, assign them to categories, mark
-them complete, star them locally, and browse by category and status. Tasks read
-instantly from a local cache and refresh from the backend in the background.
+<div align="center">
 
-Built with **Expo SDK 54**, **React Native 0.81**, **React 19**, **expo-router**,
-and **TypeScript**.
+# ✅ Task Manager
 
----
+### A local first task manager that works fully offline
 
-## Features
+Task Manager is a mobile app for planning your day without an account, a backend, or a network
+connection. Capture a task in one sentence, sort it into projects and tags, break it into
+subtasks, set reminders and repeats, and run a focus session on whatever is next. Everything is
+stored on the device, so data survives a restart, a background kill, and a reboot, and the first
+frame of every screen already shows real data.
 
-**Task List** — `app/(tabs)/index.tsx`
-- Segmented filter (All / To do / In progress / Done) plus a category dropdown,
-  and a debounced (300ms) title search
-- Sort by due date or created time, either direction
-- Sync status bar (last-refreshed time, offline banner, background-refresh
-  spinner) and pull-to-refresh
-- Cache-first: renders instantly from MMKV; a failed refresh never blanks the
-  screen
+<p>
+  <img alt="Expo SDK 54"     src="https://img.shields.io/badge/Expo-SDK_54-000020?logo=expo&logoColor=white">
+  <img alt="React Native"    src="https://img.shields.io/badge/React_Native-0.81-61DAFB?logo=react&logoColor=black">
+  <img alt="React 19"        src="https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white">
+  <img alt="TypeScript"      src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white">
+  <img alt="Redux Toolkit"   src="https://img.shields.io/badge/Redux_Toolkit-2-764ABC?logo=redux&logoColor=white">
+  <img alt="MMKV"            src="https://img.shields.io/badge/MMKV-4-2557D6">
+  <img alt="Jest"            src="https://img.shields.io/badge/Jest-350_tests-C21325?logo=jest&logoColor=white">
+</p>
 
-**Task Detail** — `app/task/[id].tsx` (edit form at `app/task/edit/[id].tsx`)
-- Full task view, edit, complete/reopen, delete (with a confirm step), and a
-  local-only star toggle
+**[Walkthrough](#preview)** · **[Key features](#key-features)** · **[Architecture](#architecture)** · **[Getting started](#getting-started)**
 
-**Categories** — `app/(tabs)/categories.tsx` (detail view at `app/category/[id].tsx`)
-- View and add categories, each with a colour swatch
-- Delete a category — its tasks are un-categorised (`on delete set null`),
-  never deleted
-- Tapping a category opens its own task list, filtered the same way as the
-  main Task List (bonus, beyond the brief)
-- Rename was optional and intentionally omitted — see
-  [Known limitations](#known-limitations)
+</div>
 
 ---
 
-## Where to find each requirement
+<details>
+<summary><strong>Table of contents</strong></summary>
 
-| Requirement                              | Where                                                                                                  |
-| :--------------------------------------- | :----------------------------------------------------------------------------------------------------- |
-| 4.1 Cache-first reads, offline-safe       | [`TasksProvider`](contexts/TasksProvider.tsx) initializer → [`taskCache`](core/tasks/taskCache.ts)      |
-| 4.2 Write → backend → cache               | `createTask` / `updateTask` / `deleteTask` in [`TasksProvider`](contexts/TasksProvider.tsx)             |
-| 4.3 `starred` survives a refresh          | [`mergeTasks.ts`](core/tasks/mergeTasks.ts) + `refresh/success` in [`tasksReducer`](contexts/tasksReducer.ts) |
-| 4.4 Filter/sort outside the render tree   | [`taskSelectors.ts`](core/tasks/taskSelectors.ts)                                                       |
-| 4.5 Sync status in UI                     | [`SyncStatusBar`](components/SyncStatusBar.tsx)                                                        |
-| Debounced search (300ms)                  | [`useDebouncedValue`](hooks/useDebouncedValue.ts), used in [`(tabs)/index.tsx`](app/(tabs)/index.tsx)   |
-| Env-based config, no hardcoded secrets    | [`config/env.ts`](config/env.ts) + [`.env.example`](.env.example)                                       |
-| Backend boundary / integration point      | [`taskRepository.ts`](core/tasks/taskRepository.ts), selected in [`core/tasks/index.ts`](core/tasks/index.ts) |
-| Supabase implementation                   | [`supabaseTaskRepository.ts`](core/tasks/supabaseTaskRepository.ts) + [`supabase/schema.sql`](supabase/schema.sql) |
-| Tests (4 suites, 38 tests)                | [`__tests__/`](__tests__)                                                                              |
+- [Preview](#preview)
+- [About the project](#about-the-project)
+- [Key features](#key-features)
+- [Built with](#built-with)
+- [Architecture](#architecture)
+- [Project structure](#project-structure)
+- [Where each requirement lives](#where-each-requirement-lives)
+- [Engineering notes](#engineering-notes)
+- [Behaviour decisions](#behaviour-decisions)
+- [Getting started](#getting-started)
+- [Testing](#testing)
+- [Project status and scope](#project-status-and-scope)
+- [Roadmap](#roadmap)
+- [Documentation](#documentation)
+- [About the developer](#about-the-developer)
+- [License](#license)
+
+</details>
 
 ---
 
-## Setup
+## Preview
 
-MMKV is a native module, so the app runs in a **development build**, not Expo Go.
+<div align="center">
+  <img alt="Task Manager walkthrough" src="docs/media/preview.gif" width="320">
+</div>
 
-### Prerequisites
+The walkthrough runs through Today, Inbox, Upcoming, Browse, a task with subtasks, All tasks,
+a project, Productivity, Focus, and Settings, recorded on an iPhone 17 Pro Max simulator with
+demo data.
 
-- **Node.js 20+** and npm
-- **iOS:** macOS with Xcode 16+ (includes the iOS Simulator) and CocoaPods
-  (`sudo gem install cocoapods` if `pod` isn't already on your PATH)
-- **Android:** Android Studio with an SDK platform + emulator configured (or a
-  physical device with USB debugging)
-- A [Supabase](https://supabase.com) account — free tier is enough — **only**
-  if you want to run against the real backend; otherwise skip both numbered
-  steps below, the app runs against a local mock with no account or
-  configuration needed
+▶️ **[Watch the full walkthrough (MP4)](https://github.com/parvej-brur/task-for-shareviral/raw/main/docs/media/preview.mp4)**
 
-```bash
-npm install
-```
+<p align="right"><a href="#top">Back to top</a></p>
 
-### 1. Provision the backend (optional)
+---
 
-Skip this and the app runs against a persistent **local mock backend** with the
-same seed data — a fresh clone works end-to-end with nothing to provision.
+## About the project
 
-To point at a real Supabase project:
+Task Manager is a personal task app built around one rule: the phone is the source of truth.
+There is no sign up, no sync service, and no request that can fail, so the app opens instantly
+and behaves the same on a plane as it does on Wi-Fi. The interface is organised around four
+daily destinations, Today, Inbox, Upcoming, and Browse, and everything else sits one tap
+inside Browse.
 
-1. Create a project at [supabase.com/dashboard](https://supabase.com/dashboard).
-2. Open **SQL Editor → New query**, paste all of
-   [`supabase/schema.sql`](supabase/schema.sql), and **Run**. That creates both
-   tables, the indexes, the `updated_at` trigger, the RLS policies, and the seed
-   data (3 categories, 8 tasks).
-3. Copy the credentials from **Project Settings**: the **Project URL** (Data API)
-   and the **anon / public** key (API Keys).
+The work that matters here is in the layers under the screens. State is a set of Redux slices
+that persist to MMKV one record at a time, dates are stored as local calendar strings so they
+cannot drift across time zones, untrusted data is coerced on the way in, and the domain logic
+(recurrence, reminder planning, the quick add parser, the focus timer, analytics, backup
+migrations) is plain TypeScript with no React and no I/O, which is where nearly all of the
+tests point.
 
-### 2. Configure the environment
+The project started as a take home assessment for ShareViral. It is kept here as a portfolio
+piece that shows a feature folder architecture with a lint enforced dependency boundary, a
+storage layer that writes only what changed, and a deliberately small and honest scope.
 
-```bash
-cp .env.example .env
-```
+<p align="right"><a href="#top">Back to top</a></p>
 
-Fill in the two values. `.env` is git-ignored; nothing is hardcoded in source.
+---
 
-```
-EXPO_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-```
+## Key features
 
-### 3. Run
+| Area                      | What it does                                                                                                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tasks**                 | Title, notes, priority, due date and time, project, tags, subtasks, reminder, and repeat. Validated on entry, with an Undo snackbar after delete.                          |
+| **Today dashboard**       | "N tasks left" up top, then Overdue, Due today, and High priority sections, with a progress bar for the day.                                                              |
+| **Inbox and Upcoming**    | Inbox holds active tasks that have no project yet. Upcoming groups active tasks by due date, soonest first.                                                                      |
+| **Projects**              | Create, edit, archive, restore, and delete, with a colour and a live "3 of 8 done" progress bar. Deleting a project un-assigns its tasks instead of deleting them.        |
+| **Tags**                  | Free form tags with their own list and detail screens. Add `#tags` while typing a task.                                                                                   |
+| **Subtasks**              | Add, edit, complete, delete, and reorder inside a task, with progress shown on the row.                                                                                   |
+| **Search, filter, sort**  | One debounced (250 ms) search that composes with status, priority, project, tag, and due filters, and sorts by due date, priority, created, or updated time.              |
+| **Recurring tasks**       | Daily, weekly on chosen days, monthly on a day, or every N days, weeks, or months. Completing one creates the next occurrence.                                            |
+| **Reminders**             | At due time, 10 minutes, 1 hour, or 1 day before, or a custom moment. Scheduled locally, with permission asked when the first reminder is set.                            |
+| **Quick add**             | Type "call Sam every friday at 5pm #work !high" and the date, time, repeat, tag, and priority are pulled out live. Each piece can be switched off before saving.          |
+| **Deep links**            | `taskmanager://task/<id>` opens a task, and tapping a reminder notification lands on the same screen.                                                                     |
+| **Focus mode**            | A timer on one task, with pause, resume, and stop. It survives the app being killed, and a session that ended while closed is completed on the next launch.               |
+| **Productivity**          | Completed today and this week, the weekly completion rate, overdue count, and focus minutes.                                                                              |
+| **Backup**                | Export everything to a JSON file and import it back. Every record is validated, and older backup versions are migrated forward.                                           |
+| **Appearance**            | System, light, and dark themes on a cobalt and marigold palette, with defaults for reminders and focus length.                                                            |
+| **Accessibility**         | Roles and labels on every control, status carried by icon and text as well as colour, reduced motion respected, and a contrast test that fails the build on a bad pair.  |
 
-```bash
-# First run creates the native projects, then launches the dev build:
-npx expo run:ios       # or: npx expo run:android
-```
+<p align="right"><a href="#top">Back to top</a></p>
 
-Once a dev build is installed you can use the normal dev server. Expo inlines
-`EXPO_PUBLIC_*` at bundle time, so `--clear` is required after editing `.env`:
+---
 
-```bash
-npx expo start --clear
-```
+## Built with
 
-Other scripts:
+| Choice                                  | Reason it is here                                                                                                                                  |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Expo SDK 54 and React Native 0.81**   | The new architecture is on, and Expo Router gives typed, file based routes and deep links for free.                                                 |
+| **TypeScript `strict`**                 | The type system is the main safety net in the project, so it is turned up fully.                                                                    |
+| **Redux Toolkit**                       | One slice per feature, pure reducers, and thunks for the side effects. Immer keeps unchanged records referentially equal, which the storage layer uses. |
+| **react-native-mmkv**                   | Synchronous reads and writes, so the store hydrates before the first render and no screen needs a loading gate.                                     |
+| **@shopify/flash-list**                 | Recycled rows for lists that stay smooth at thousands of tasks.                                                                                     |
+| **chrono-node**                         | Natural language date and time parsing behind quick add.                                                                                            |
+| **expo-notifications**                  | Local reminders and the focus timer end alert. No push server is involved.                                                                          |
+| **React Compiler**                      | Automatic memoization, so screens carry no hand written `useMemo` or `useCallback`.                                                                 |
+| **Jest with jest-expo**                 | Fast unit tests over the pure domain modules, with no native mocks needed for most of them.                                                         |
 
-```bash
-npm test          # Jest unit tests
-npm run typecheck # tsc --noEmit
-npm run lint      # ESLint (expo lint)
-```
+Server state libraries and an ORM were left out on purpose. There is no server, and a slice
+per feature persisted key by key covers everything the app needs.
 
-> **Which backend am I on?** Whichever one is chosen logs a line on startup, and
-> the choice is driven purely by whether both env variables are set — see
-> [The single integration point](#the-single-integration-point).
+<p align="right"><a href="#top">Back to top</a></p>
 
 ---
 
 ## Architecture
 
-Feature code is grouped by responsibility, matching the import aliases in
-`tsconfig.json` (`@/…` resolves from the project root).
+Screens read from selectors, dispatch thunks, and never touch storage. The store is the only
+thing that talks to MMKV, and it does so through one persistence subscriber.
 
 ```
-app/                    expo-router screens
-  (tabs)/index.tsx      Task List
-  (tabs)/categories.tsx Categories
-  category/[id].tsx     Category Detail (bonus: tasks scoped to one category)
-  task/[id].tsx         Task Detail
-  task/new.tsx          Create Task
-  task/edit/[id].tsx    Edit Task
-components/             reusable UI (Button, Chip, TaskListItem, TaskForm, …)
-config/env.ts          environment-based backend config (no hardcoded secrets)
-contexts/              TasksProvider (state) + tasksReducer (pure)
-core/
-  storage/mmkv.ts       typed MMKV JSON wrapper
-  tasks/
-    index.ts            ← SINGLE backend integration point
-    taskRepository.ts   TaskRepository interface (the boundary)
-    supabaseClient.ts   client construction (URL polyfill, no auth session)
-    supabaseTaskRepository.ts  the Supabase implementation
-    mockTaskRepository.ts  local stand-in used when no credentials are set
-    supabaseRowMappers.ts  pure row ↔ domain mapping (snake_case ↔ camelCase)
-    taskCache.ts        MMKV-backed cache (tasks, categories, starred, sync time)
-    taskSelectors.ts    pure filter + sort + segment decomposition
-    mergeTasks.ts       pure starred merge
-    seed.ts             seed categories + tasks (mirrors supabase/schema.sql)
-hooks/                 useDebouncedValue, useOnlineStatus
-styles/                shared tokens (spacing/radius/shadow) + common styles
-constants/theme.ts     colour + font tokens
-supabase/schema.sql    schema, indexes, RLS policies and seed data
-types/task.ts          domain types
+Screens (src/features/*/screens, rendered by src/app routes)
+        │  useAppSelector / useAppDispatch
+        ▼
+Selectors and thunks         pure derivations, and actions that also schedule
+        │                    reminders or show an Undo snackbar
+        ▼
+Redux slices                 tasks, projects, tags, focus, settings
+        │  store.subscribe
+        ▼
+src/lib/store/persistence    diffs each slice, writes only the records that changed
+        │
+        ▼
+src/lib/storage              typed key value backend over MMKV, one key per record
 ```
 
-**Data flow.** Screens depend only on `useTasks()`. The provider owns the
-cache-first orchestration; the reducer is a pure state machine; the repository is
-the only thing that talks to the "backend". Nothing in the UI knows whether the
-backend is a mock or Supabase.
+- **The store hydrates synchronously.** MMKV reads are synchronous, so the store is filled
+  when the module loads and the first frame already shows real data. There is no splash
+  gated fetch and no loading spinner.
+- **One key per record.** Records live under `task:<id>`, `project:<id>`, and so on. Immer
+  keeps unchanged records referentially equal, so after each action only the records that
+  changed are written and deleted ones are removed. Editing one task does not rewrite the rest.
+- **Untrusted data is coerced on entry.** Each feature has a `schemas.ts` that turns stored or
+  imported JSON into a valid record or rejects it. A record that cannot be parsed is skipped,
+  never fatal, and the user is told once.
+- **Domain logic has no React and no I/O.** Dates, validation, recurrence, the reminder
+  planner, the quick add parser, the focus timer, analytics, and backup migrations are plain
+  functions, which keeps them fast to test and easy to reason about.
+- **The feature boundary is enforced.** Routes reach a feature only through its `index.ts`,
+  shared components never import a feature, and nothing below the route layer imports a
+  screen. ESLint checks this, it is not left to discipline.
 
-### On memoization
-
-**React Compiler is enabled** (`experiments.reactCompiler` in
-[`app.json`](app.json)), so component render output is auto-memoized at build
-time at a finer granularity than hand-written dependency arrays achieve, and
-without the stale-dependency bugs they invite. Screens don't hand-write any
-`useMemo`/`useCallback` — the compiler covers them.
-
-[`TasksProvider`](contexts/TasksProvider.tsx) is the one place memoization is
-still hand-written: its actions (`createTask`, `updateTask`, `refresh`, …) and
-the context value object are wrapped in `useCallback`/`useMemo` so the value
-handed to `TasksContext.Provider` stays referentially stable across renders.
-That's deliberate at a context boundary specifically — every screen in the app
-consumes this one value, so an unstable reference would re-render the whole
-tree on every provider render, which per-component compiler memoization
-doesn't reach across.
-
-What memoization is left beyond that is the kind the compiler doesn't do:
-`React.memo` on [`TaskListItem`](components/Lists/TaskListItem.tsx), so a star
-toggle on one row doesn't re-render the whole list.
-
-### Cache-first behaviour
-
-1. On the first render, `TasksProvider` hydrates state **synchronously** from MMKV
-   in the `useReducer` initializer — the list paints immediately, no loading flash.
-2. A background refresh then calls the repository.
-3. On success, fresh data replaces the cache and updates the UI; the last-refreshed
-   time is recorded.
-4. On failure, the cached tasks stay on screen and a non-blocking message is shown
-   (offline banner / error line). The screen is **never** blanked when there is
-   cached content.
-5. If there is nothing cached and the load fails, the list shows a useful empty
-   state with a **Retry** action.
-
-Writes (create / edit / complete / delete) go to the repository first; only on
-success is the local state/cache updated. If a write fails, an error toast is
-shown and the cache is left untouched.
+<p align="right"><a href="#top">Back to top</a></p>
 
 ---
 
-## Local storage — MMKV
-
-**Choice: [`react-native-mmkv`](https://github.com/mrousavy/react-native-mmkv) (v4).**
-MMKV's reads and writes are **synchronous**, which is exactly what a cache-first
-list wants: state can be hydrated inside the `useReducer` initializer and the
-first frame already shows real data — no `useEffect`, no loading spinner, no
-async gate before the first paint. It is also dramatically faster than
-AsyncStorage for the small, frequent reads/writes this app does. The whole cache
-lives behind a tiny typed wrapper (`core/storage/mmkv.ts` → `core/tasks/taskCache.ts`),
-so the storage engine could be swapped without touching the UI. The trade-off is
-that MMKV is a native module and requires a development build (not Expo Go).
-
----
-
-## State management — Context + `useReducer`
-
-**Choice: React Context + `useReducer`.** The app has a single, cohesive slice of
-state (tasks, categories, starred set, sync status) consumed by a handful of
-screens. A `useReducer` keeps all transitions in one pure, testable function, and
-Context distributes it without prop-drilling — no extra dependency, and it slots
-straight into the project's existing `contexts/` folder. Zustand or Redux Toolkit
-would be reasonable at larger scale, and TanStack Query would be a strong fit if
-the server were the source of truth; here the source of truth is the **local
-cache**, and cache-first hydration + a local-only field are simpler to express by
-hand than to bend a query cache around. The reducer stays pure (no I/O); the
-provider handles side effects (repository calls, MMKV persistence).
-
----
-
-## How `starred` is preserved across a refresh
-
-`starred` is per-device and never sent to the backend, so the two are stored
-separately:
-
-- The backend/cache holds plain task data (`RemoteTask`, no `starred`).
-- The starred task ids live in their own cache key (`starred-ids`).
-
-The app-facing `Task[]` is derived by overlaying the starred set onto the task
-data in one pure function, `applyStarred(remoteTasks, starredIds)`
-([`core/tasks/mergeTasks.ts`](core/tasks/mergeTasks.ts)). A background refresh only
-replaces `remoteTasks`; the starred set is untouched, so re-deriving preserves
-every star — even if the backend edited the task's title in the same refresh.
-
-**How you'd know if it broke:** it's covered directly by
-[`__tests__/mergeTasks.test.ts`](__tests__/mergeTasks.test.ts) ("preserves stars
-when the backend returns refreshed task data") and by the reducer test asserting
-`refresh/success` replaces tasks but leaves `starredIds` intact.
-
----
-
-## Filter / sort
-
-Filtering (category, status, starred, debounced title search) and sorting (due
-date or created time, asc/desc) are pure functions in
-[`core/tasks/taskSelectors.ts`](core/tasks/taskSelectors.ts). The Task List
-screen contains **no `.filter()` / `.sort()` of its own** — every derived value
-is a selector call:
-
-| Screen value   | Selector             |
-| :------------- | :------------------- |
-| active filters | `filtersForGroup`    |
-| visible rows   | `selectVisibleTasks` |
-| segment badges | `countTasksByGroup`  |
-| featured card  | `selectFeaturedTask` |
-
-**Why `filtersForGroup` exists.** The segmented control is a product decision —
-All / To do / In progress / Done — but the two dimensions underneath it are
-independent: the backend's `status` (`open` / `done`) and the device-local
-`starred` flag. Collapsing them into one enum would have meant the screen
-re-deriving "is this task in this segment?" per row, which is exactly the inline
-filtering the brief rules out. Instead each segment decomposes into a plain
-`TaskFilters` value (`{ status, starred, categoryId, search }`), so `filterTasks`
-stays a genuine open/done status filter and the segments are just presets over it.
-
-Sorting by due date always sinks undated tasks to the bottom in **both**
-directions — reversing the sort shouldn't promote tasks that have no date at all.
-
-Search is debounced 300ms via [`useDebouncedValue`](hooks/useDebouncedValue.ts).
-300ms sits just past typical inter-keystroke time (~150–200ms), so a burst of
-typing collapses into one pass instead of one per character, while still landing
-inside the ~400ms window where a result still feels like a direct response.
-
----
-
-## Sync status in the UI
-
-[`SyncStatusBar`](components/SyncStatusBar.tsx) surfaces, in priority order: an
-offline banner (from `@react-native-community/netinfo`), a "Refreshing…" spinner
-during a background refresh, a non-blocking error line, or the last-refreshed
-relative time. Pull-to-refresh is also wired to the same `refresh()` action.
-
----
-
-## Backend
-
-**Choice: Supabase** (Postgres + PostgREST), with a local mock as an automatic
-fallback when no credentials are configured.
-
-Supabase gives a real relational schema with foreign keys, `check` constraints
-and a database-owned `updated_at` — the correctness properties this app leans on
-(a task can't hold a dangling `category_id`, `status` can't drift outside
-`open`/`done`) belong in the database, not in client validation. PostgREST also
-means no server code to write or host for six CRUD operations.
-
-### Environment config
-
-No secrets are committed, and no URL or key appears in source. Config is read
-from the environment in one place,
-[`config/env.ts`](config/env.ts), and `.env` is git-ignored;
-[`.env.example`](.env.example) documents the variable names:
+## Project structure
 
 ```
-# .env  (git-ignored)
-EXPO_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+src/
+  app/          Expo Router routes only, one line wrappers around feature screens
+  features/     Business domains: tasks, projects, tags, focus, productivity,
+                notifications, settings, backup, browse
+                each owns its types, slice, thunks, selectors, schemas,
+                components, screens, tests, and one index.ts
+  components/   Shared, feature agnostic UI (ui/ layout/ feedback/)
+  lib/          Infrastructure: storage/ (MMKV) and store/ (root store, persistence)
+  providers/    app-providers.tsx: fonts, store, navigation theme, app level effects
+  theme/        Light and dark palettes, spacing, type scale
+  hooks/        Shared hooks (debounce, clock, reduce motion)
+  utils/        Pure helpers for dates and validation
+  config/       Input limits
+  testing/      Test factories
+assets/         Icons and splash art
+docs/           Architecture decision records
+e2e/            Maestro smoke flow
 ```
 
-Two notes on the mechanics. Expo's Babel plugin inlines `process.env.EXPO_PUBLIC_*`
-at **bundle time**, so the full member expression has to be written out literally
-(it can't be destructured or built dynamically) and the bundler needs a
-`--clear` restart after any change. And `EXPO_PUBLIC_` means "shipped inside the
-app binary" — the anon key is fine there because it is public by design and gated
-by row-level security, but a service-role key never is.
+A feature exposes a single public surface through its `index.ts`. Inside it, files are named by
+role and only the ones that are needed exist: `store.ts`, `actions.ts`, `selectors.ts`,
+`schemas.ts`, `types.ts`, plus domain modules named for what they do, such as `recurrence.ts`,
+`quick-add.ts`, and `task-views.ts`. Tests sit next to the code. Files and folders are
+kebab-case, and every import outside the current folder resolves through the `@/` alias
+rather than `../`.
 
-`getSupabaseConfig()` throws on a half-populated config rather than returning
-blanks, so a typo in `.env` fails at startup with an actionable message instead of
-an opaque 401 on the first request.
-
-### The single integration point
-
-The app depends only on the `TaskRepository` interface — six methods
-(`listTasks`, `createTask`, `updateTask`, `deleteTask`, `listCategories`,
-`createCategory`). Which implementation is used is decided in
-[`core/tasks/index.ts`](core/tasks/index.ts) and nowhere else, driven by whether
-credentials are present:
-
-```ts
-// core/tasks/index.ts — env-driven selection
-if (!isSupabaseConfigured) return new MockTaskRepository();
-return new SupabaseTaskRepository(createSupabaseClient());
-```
-
-Falling back rather than failing is deliberate: a fresh clone runs end-to-end with
-no project to provision, which matters more for review than for production. The
-same reasoning covers a malformed URL — client construction is wrapped, so a typo
-in `.env` degrades to the mock with a warning instead of a blank screen at
-startup.
-
-Nothing above this line knows which one it got. Screens, cache, reducer and hooks
-were written against the mock and needed **zero changes** when the real backend
-was plugged in — which was the point of the boundary.
-
-[`SupabaseTaskRepository`](core/tasks/supabaseTaskRepository.ts) does three
-things and nothing else: issue the query, throw on failure, hand rows to the
-mappers. No caching or merging happens there — that stays in `TasksProvider`. Two
-details worth noting: columns are listed explicitly rather than `select('*')`, so
-a schema drift surfaces as a type error instead of a missing field at runtime;
-and writes use `.select().single()` to return the **database's** version of the
-row, so the cache stores server-generated `id` / `created_at` / `updated_at`
-rather than a client-side guess.
-
-[`supabaseClient.ts`](core/tasks/supabaseClient.ts) imports
-`react-native-url-polyfill/auto` before creating the client. Hermes ships an
-incomplete `URL`, and supabase-js builds every PostgREST request by parsing and
-mutating one — without the polyfill the query string comes out empty, so filters
-are silently dropped and requests "succeed" with the wrong rows. Sessions are
-disabled (`persistSession: false`) since auth is out of scope.
-
-[`MockTaskRepository`](core/tasks/mockTaskRepository.ts) persists to its own MMKV
-store (separate from the app cache, so it behaves like a real remote) and
-simulates ~600ms latency plus offline failures via NetInfo — which keeps the
-cache-first, offline and write-failure paths exercisable without airplane-moding
-a device.
-
-### Row mapping
-
-Postgres is snake_case with nullable columns; the domain types are camelCase and
-non-optional. [`supabaseRowMappers.ts`](core/tasks/supabaseRowMappers.ts) is the
-single place that bridges them, deliberately free of any Supabase import so it
-stays a pure unit-testable module.
-
-The load-bearing one is `toTaskUpdate`: `null` is a *meaningful* value here
-(clearing a due date, un-categorising a task), so "key absent" and "key present
-but null" must not collapse together. Mapping every field unconditionally would
-send `due_date: null` on a title-only edit and silently wipe the column — that
-regression is pinned by a test.
-
-### Table schema
-
-The full runnable script — schema, indexes, trigger, RLS policies and seed data —
-is [`supabase/schema.sql`](supabase/schema.sql). Paste it into the Supabase SQL
-Editor and run it once. It is idempotent (it drops and recreates both tables), so
-it doubles as a reset-to-known-state script.
-
-```sql
-create table categories (
-  id         uuid primary key default gen_random_uuid(),
-  name       text not null,
-  color      text,                       -- swatch name, or null to derive one
-  created_at timestamptz not null default now()
-);
-
-create table tasks (
-  id          uuid primary key default gen_random_uuid(),
-  title       text not null,
-  description text not null default '',
-  category_id uuid references categories(id) on delete set null,
-  status      text not null default 'open' check (status in ('open', 'done')),
-  due_date    timestamptz,
-  created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now()
-);
-```
-
-A few choices worth calling out:
-
-- **`starred` is intentionally not a column.** It is per-device, so it lives only
-  in MMKV — which is exactly why a refresh has to merge it back in.
-- **`on delete set null`, not `cascade`.** Deleting a category must un-categorise
-  its tasks, never delete them.
-- **`check (status in ('open','done'))`** keeps the status enum enforced in the
-  database rather than trusted from the client. The mapper still narrows unknown
-  values to `open` — belt and braces, since a hand-written row can predate a
-  constraint.
-- **`color` is free text, not an enum**, so adding a swatch to the app doesn't
-  need a migration; the client narrows values it doesn't recognise back to null.
-- **`updated_at` is owned by a trigger.** The client never sends it, so it can't
-  lie about it.
-- **Indexes on `category_id`, `status`, `created_at`** — the columns the list
-  screen actually filters and orders by.
-
-### Row-level security
-
-Authentication is out of scope, so the app talks to Postgres as the `anon` role.
-RLS is still **enabled**, with policies granting `anon` full access — leaving RLS
-off would make the tables world-writable with no policy to point at, and having
-the policy written down means swapping it for `auth.uid() = user_id` is a one-line
-change if auth is ever added. This is the honest configuration for an open demo
-backend, and it is a deliberate choice rather than a default.
-
-### Seed data (3 categories, 8 tasks)
-
-Included at the bottom of [`supabase/schema.sql`](supabase/schema.sql), and
-mirrored in [`core/tasks/seed.ts`](core/tasks/seed.ts) so the mock backend shows
-the same data.
-
-```sql
-insert into categories (id, name, color) values
-  ('11111111-1111-1111-1111-111111111111', 'Design',      'violet'),
-  ('22222222-2222-2222-2222-222222222222', 'Development', 'indigo'),
-  ('33333333-3333-3333-3333-333333333333', 'Research',    'teal');
-
-insert into tasks (title, description, category_id, status, due_date, created_at) values
-  ('UI Design',            'Design the home and task detail screens in Figma.',       '1111…', 'open', '2026-07-25T09:00:00Z', '2026-07-20T08:00:00Z'),
-  ('Web Development',      'Build the marketing landing page and waitlist form.',     '2222…', 'open', '2026-07-24T11:30:00Z', '2026-07-19T10:15:00Z'),
-  ('Office Meeting Notes', 'Write up decisions from the weekly planning meeting.',    '3333…', 'done', null,                   '2026-07-18T14:00:00Z'),
-  ('Dashboard Design',     'Lay out the analytics dashboard with progress cards.',    '1111…', 'open', '2026-07-28T09:00:00Z', '2026-07-21T09:45:00Z'),
-  ('Market Research',      'Compare three competitor task apps and summarise.',       '3333…', 'done', '2026-07-15T09:00:00Z', '2026-07-10T11:00:00Z'),
-  ('API Integration',      'Wire the task list screen to the backend endpoints.',     '2222…', 'open', '2026-07-30T17:00:00Z', '2026-07-22T13:20:00Z'),
-  ('Design System Audit',  'Review spacing and colour tokens for consistency.',       '1111…', 'open', null,                   '2026-07-17T15:30:00Z'),
-  ('User Interviews',      'Run five interviews to validate the onboarding flow.',    '3333…', 'open', '2026-07-26T10:00:00Z', '2026-07-16T09:00:00Z');
-```
-
-Category UUIDs are fixed rather than generated so the task inserts can reference
-them directly, and `created_at` is seeded explicitly so "sort by created time" has
-something meaningful to sort — inserting all eight in one statement would
-otherwise give them the same `now()`.
+<p align="right"><a href="#top">Back to top</a></p>
 
 ---
 
-## Testing approach
+## Where each requirement lives
 
-Run with `npm test` — **4 suites, 38 tests**. They target the correctness-critical
-**pure logic**, which is where bugs would actually hurt and where tests give the
-most signal per line:
+| Area                                                                       | Code                                                                                                                                                                                                                                   |
+| :------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 Tasks (fields, validation, create, edit, complete, delete with Undo)     | [`schemas.ts`](src/features/tasks/schemas.ts), [`actions.ts`](src/features/tasks/actions.ts), [`task-form-screen.tsx`](src/features/tasks/screens/task-form-screen.tsx), [`use-task-actions.ts`](src/features/tasks/hooks/use-task-actions.ts) |
+| 2 Views (Inbox, Today dashboard, Upcoming, Completed)                      | [`task-views.ts`](src/features/tasks/task-views.ts), [`screens/`](src/features/tasks/screens)                                                                                                                                          |
+| 3 Projects (create, edit, archive, restore, delete, progress)              | [`features/projects/`](src/features/projects), [`store.ts`](src/features/projects/store.ts)                                                                                                                                            |
+| 4 Tags                                                                     | [`features/tags/`](src/features/tags), [`store.ts`](src/features/tags/store.ts)                                                                                                                                                        |
+| 5 Subtasks (add, edit, complete, delete, reorder)                          | [`subtask-list.tsx`](src/features/tasks/components/subtask-list.tsx), [`store.ts`](src/features/tasks/store.ts)                                                                                                                        |
+| 6 Search, filter, sort (250 ms debounce)                                   | `queryTasks` in [`task-query.ts`](src/features/tasks/task-query.ts), [`task-controls.tsx`](src/features/tasks/components/task-controls.tsx)                                                                                            |
+| 7 Recurring tasks                                                          | [`recurrence.ts`](src/features/tasks/recurrence.ts), [`completion.ts`](src/features/tasks/completion.ts)                                                                                                                               |
+| 8 Reminders and notifications                                              | [`features/notifications/`](src/features/notifications)                                                                                                                                                                                |
+| 9 Deep links (`taskmanager://task/<id>`)                                   | [`task/[id].tsx`](src/app/task/[id].tsx), scheme in [`app.config.ts`](app.config.ts)                                                                                                                                                   |
+| 10 Natural language quick add                                              | [`quick-add.ts`](src/features/tasks/quick-add.ts), [`quick-add-screen.tsx`](src/features/tasks/screens/quick-add-screen.tsx)                                                                                                           |
+| 11 Focus mode                                                              | [`features/focus/`](src/features/focus)                                                                                                                                                                                                |
+| 12 Productivity analytics                                                  | [`features/productivity/`](src/features/productivity)                                                                                                                                                                                  |
+| 13 Settings, export and import                                             | [`features/settings/`](src/features/settings), [`features/backup/`](src/features/backup)                                                                                                                                               |
+| 14 UI and UX                                                               | [`components/`](src/components), [`theme/`](src/theme)                                                                                                                                                                                 |
+| 15 Accessibility                                                           | [`accessibility.ts`](src/features/tasks/accessibility.ts), labels and roles throughout `components/`, contrast test in [`contrast.test.ts`](src/theme/contrast.test.ts)                                                                |
+| 16 Performance                                                             | [`task-list.tsx`](src/features/tasks/components/task-list.tsx), [`task-row.tsx`](src/features/tasks/components/task-row.tsx), [`persistence.ts`](src/lib/store/persistence.ts), [`dev-seed.ts`](src/features/settings/dev-seed.ts)      |
+| 17 Error handling                                                          | [`route-error.tsx`](src/components/feedback/route-error.tsx), [`errors.ts`](src/lib/storage/errors.ts), [`list-gate.tsx`](src/components/feedback/list-gate.tsx)                                                                        |
 
-- **Filter / sort** ([`taskSelectors.test.ts`](__tests__/taskSelectors.test.ts)) —
-  the required case. Category/status/starred/search filtering; sorting by due date
-  (undated tasks last in *both* directions) and created time; that sorting doesn't
-  mutate its input; that each segment decomposes to the right filter pair and that
-  the segments **partition** the list — every task lands in exactly one, so no row
-  is double-counted or invisible.
-- **Cache merge** ([`mergeTasks.test.ts`](__tests__/mergeTasks.test.ts)) — the
-  load-bearing invariant: `starred` survives a refresh that returns edited task
-  data, and new backend tasks default to unstarred.
-- **Reducer** ([`tasksReducer.test.ts`](__tests__/tasksReducer.test.ts)) — a failed
-  refresh keeps cached tasks on screen (never blank), a successful refresh replaces
-  tasks without disturbing the starred set, and upsert/remove/toggle behave.
-- **Row mapper** ([`supabaseRowMappers.test.ts`](__tests__/supabaseRowMappers.test.ts)) —
-  snake_case ↔ camelCase, null handling, unknown `status` and unknown `color`
-  narrowing to safe values, and the partial-update case that would otherwise wipe
-  columns on an edit. This is the layer where a real Supabase bug would land, and
-  it is testable without a network because it holds no Supabase import.
-
-The bias is toward tests that pin an **invariant** rather than restate an
-implementation: "stars survive a refresh", "segments partition the list", "an
-untouched column is absent from the patch". Each one fails loudly if the
-behaviour regresses, and none of them break when the UI is restyled.
-
-These modules import only types, so they run fast in plain Jest with no native
-mocks. UI/screen tests were deliberately skipped in the interest of focus.
+<p align="right"><a href="#top">Back to top</a></p>
 
 ---
 
-## Known limitations
+## Engineering notes
 
-- **RLS grants the `anon` role full access.** Correct for a demo with auth out of
-  scope, and not something to ship — anyone with the URL and anon key can read and
-  write. The policies are written out in `schema.sql` precisely so the change to
-  `auth.uid() = user_id` is visible and small.
-- **No integration test against a live Supabase project.** The row mappers are
-  unit-tested and the repository is thin by design, but the wire format itself is
-  verified by running the app, not by CI. Mocking the PostgREST client would test
-  my mock more than the backend; a seeded test project is the real answer, and
-  that's the next thing I'd add.
-- **No offline write queue** — writes require connectivity and fail cleanly
-  otherwise; explicitly out of scope for this task.
-- **Due dates use quick presets** (Today / Tomorrow / +3 days / Next week / none)
-  rather than a full calendar picker, to avoid an extra native dependency.
-- **Category rename is not implemented.** Delete is (both the UI and the
-  backend `on delete set null` behaviour); rename was optional and omitted.
-- **The whole task list lives in memory** and re-derives on every change. Fine at
-  seed scale; see the note below for what I'd change at 2,000 items.
-- Requires a development build (MMKV is native) — the app does not run in Expo Go.
+A few decisions worth calling out for anyone reading the code:
 
-## What I'd do differently with another day
+- **Redux slices over Context, and no query library.** The app has several related pieces of
+  state (tasks, projects, tags, focus, settings) that reference each other, and deleting a
+  project has to un-assign its tasks. Slices with `extraReducers` express that in one place,
+  and there is no server to cache, so a data fetching library would have nothing to do.
+- **MMKV with a diffing persistence layer.** A subscriber compares each slice with its
+  previous value and writes only the records whose reference changed, so a keystroke in one
+  task never rewrites a thousand others. No `redux-persist` is needed.
+- **Dates are strings, not instants.** Due dates are local `YYYY-MM-DD` and times are
+  `HH:mm`. "Due Friday" stays Friday across time zones and daylight saving changes, and
+  comparing two dates is a string comparison.
+- **Undo restores the same record.** Delete keeps the full task in the snackbar callback and
+  puts back the same id, subtasks included. Completing a recurring task also creates the next
+  occurrence, and its Undo removes that occurrence too.
+- **A pure reminder planner.** It picks the next 50 upcoming reminders, since iOS caps pending
+  notifications at 64, and a diff turns that into the minimum cancel and schedule calls. It
+  runs at start, on foreground, and, debounced, after task changes. Permission is requested
+  when the first reminder is set, not on launch.
+- **Focus state is a timestamp.** The session stores `endsAt`, or `remainingMs` when paused,
+  and the countdown is computed from that on every tick, so a slow render never makes the
+  timer drift. The end notification is scheduled on start and resume, and cancelled on pause
+  and stop.
+- **Memoization is left to the compiler.** React Compiler is on, so screens carry no
+  `useMemo` or `useCallback`. `React.memo` is used only on `TaskRow`, the one component every
+  list repeats, and it receives primitives, the task record, and stable callbacks.
+- **Colour is never the only signal.** The palette has no red, green, or teal. Overdue is
+  burnt orange, completed is plum purple, and each status also carries an icon or a label.
+  `contrast.test.ts` checks every text pair against WCAG AA and guards the hue rules.
 
-- Generate the row types from the live schema (`supabase gen types typescript`)
-  instead of hand-writing `TaskRow` / `CategoryRow`, so a migration breaks the
-  build rather than a request.
-- Add integration tests around `TasksProvider` (cache hydrate → refresh → write)
-  with the repository and MMKV mocked. That's the seam the current unit tests
-  don't cover, and it's where a real bug would most plausibly hide.
-- Add a proper date picker, and category rename.
-- **At 2,000 items** I'd look at the derivation chain before the list: today every
-  keystroke or star toggle re-runs `applyStarred` over all tasks and then a full
-  filter + sort. First moves would be keying the cache by id and filtering off an
-  index rather than a linear scan, memoising the sort separately from the filter,
-  then `getItemLayout` / `windowSize` tuning on the `FlatList`. I'd profile before
-  any of it, though — at seed scale this is measurably not the bottleneck.
+<p align="right"><a href="#top">Back to top</a></p>
 
-## AI usage
+---
 
-AI assistance was used to scaffold repetitive UI (screens, components, styles),
-draft the unit tests, write the Supabase SQL and the boilerplate half of
-`SupabaseTaskRepository` (six near-identical query/error/map blocks), and write
-this README. The engineering decisions — the `TaskRepository` boundary and single
-integration point, storing `starred` separately and merging it on refresh,
-cache-first hydration via MMKV's synchronous reads, and the Context + reducer
-split — were designed deliberately, and every file was reviewed and verified
-(`npm test`, `npm run typecheck`, `npm run lint`, and a headless bundle) before
-committing.
+## Behaviour decisions
 
-Two things in the Supabase layer were specifically *not* left to a first draft,
-because the failure modes are quiet ones: the `URL` polyfill import (without it
-requests succeed while dropping their query string) and `toTaskUpdate`'s
-absent-vs-null distinction (which silently wipes columns on an edit). Both are
-now commented at the call site and, in the second case, pinned by a test.
+Small product rules that are easy to miss and are covered by tests where it matters:
+
+- **Overdue is time aware.** A task due today at 9 AM is overdue at 10 AM.
+- **"At due time" with no time set fires at 09:00.**
+- **Archived projects** hide their tasks from Inbox, Today, and Upcoming, and hide the
+  project from pickers. The tasks stay reachable inside the project once it is restored, and
+  their reminders still fire.
+- **Today's "High priority" section** lists other active high priority tasks, meaning ones
+  not already under Overdue or Due today.
+- **Custom "every N months"** anchors to the previous due date, so Jan 31 becomes Feb 28 and
+  then Mar 28. "Monthly on day 31" does not drift.
+- **Import is strict and forgiving at once.** Every record is validated, unreadable or
+  duplicate ones are counted and skipped, references to missing projects or tags are dropped,
+  and a running focus session is never restored. Files from a newer app version are refused,
+  and older ones are migrated.
+- **The focus completion prompt** survives an app kill through an `acknowledged` flag.
+
+<p align="right"><a href="#top">Back to top</a></p>
+
+---
+
+## Getting started
+
+**Prerequisites:** Node 20 or newer and npm. For iOS, macOS with Xcode 16 or newer and
+CocoaPods. For Android, Android Studio with an emulator, or a device with USB debugging.
+
+MMKV, notifications, the date picker, and the document picker are native modules, so the app
+runs in a **development build**, not Expo Go.
+
+```bash
+git clone https://github.com/parvej-brur/task-for-shareviral.git
+cd task-for-shareviral
+npm install
+npx expo run:ios       # or: npx expo run:android
+```
+
+The first run generates the native projects and launches the dev build. After that, the normal
+dev server is enough:
+
+```bash
+npx expo start
+```
+
+### Routes
+
+| Route                                  | Screen                                                     |
+| -------------------------------------- | ---------------------------------------------------------- |
+| `/` (tab)                              | Today dashboard                                            |
+| `/inbox`, `/upcoming`, `/browse` (tabs) | Inbox, Upcoming, and the Browse hub                        |
+| `/task/new`, `/task/[id]`, `/task/edit/[id]` | Create, view, and edit a task. `[id]` is the deep link target |
+| `/quick-add`                           | Natural language capture                                   |
+| `/tasks/all`, `/completed`             | Search, filter, and sort across everything, and finished work |
+| `/project/new`, `/project/[id]`, `/projects/archived` | Projects, their detail, and the archive        |
+| `/tags`, `/tag/[id]`                   | Tags and the tasks under one tag                           |
+| `/focus`, `/productivity`, `/settings` | Focus timer, weekly stats, and preferences                 |
+
+### Scripts
+
+| Command             | Purpose                                     |
+| ------------------- | ------------------------------------------- |
+| `npm start`         | Start the Expo dev server                   |
+| `npm run ios`       | Build and run the iOS dev build             |
+| `npm run android`   | Build and run the Android dev build         |
+| `npm test`          | Run the Jest unit tests                     |
+| `npm run typecheck` | Type check with `tsc --noEmit`              |
+| `npm run lint`      | Lint with ESLint, including boundary rules  |
+| `npm run format`    | Format with Prettier                        |
+| `npm run verify`    | Lint, type check, and test in one go        |
+
+EAS build profiles for `development`, `preview`, and `production` are in
+[`eas.json`](eas.json).
+
+### Environment
+
+None. The app makes no network calls and reads no environment variables, so there is nothing
+to configure and no secret to protect. [`.env.example`](.env.example) exists only to say so.
+
+<p align="right"><a href="#top">Back to top</a></p>
+
+---
+
+## Testing
+
+Run with `npm test`: **16 suites, 350 tests**. They target the correctness critical pure
+logic, which is where bugs would actually hurt and where tests give the most signal per line.
+
+| Area                | What is pinned down                                                                                                              |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Task queries**    | Search, filter, and sort compose in one pass, and views such as Today and Upcoming bucket tasks correctly.                        |
+| **Recurrence**      | Next occurrence for daily, weekly, monthly, and custom rules, including month end anchoring.                                     |
+| **Quick add**       | Dates, times, repeats, tags, and priorities parsed out of a sentence, and each piece switching off cleanly.                      |
+| **Reminders**       | The planner's cap and ordering, the diff into cancel and schedule calls, and the app running with notifications unavailable.     |
+| **Focus**           | The timestamp based timer, pause and resume, and a session that expired while the app was closed.                                |
+| **Backup**          | Round trips, validation of bad records, version migration, and refusing files from a newer app.                                  |
+| **Store**           | Task, project, and tag actions, Undo, and persistence: one record per key, only changed records written, corrupt ones skipped.   |
+| **Theme**           | Every text pair meets WCAG AA and no palette hue crosses the no red, green, or teal rule.                                        |
+
+The bias is toward tests that pin an invariant rather than restate an implementation, so they
+fail loudly on a regression and survive a restyle. UI tests were deliberately skipped in the
+interest of focus. A Maestro smoke flow in [`e2e/maestro/smoke.yaml`](e2e/maestro/smoke.yaml)
+checks that the app starts and the four tabs are reachable:
+
+```bash
+maestro test e2e/maestro/smoke.yaml
+```
+
+<p align="right"><a href="#top">Back to top</a></p>
+
+---
+
+## Project status and scope
+
+The app is complete for what it sets out to do, and a few things are deliberately left out:
+
+- **No accounts, backend, or sync.** Data lives on one device. Use export and import to move
+  it, or to keep a copy.
+- **No collaboration, attachments, location reminders, calendar sync, or widgets.**
+- **No AI services and no gamification.**
+- **Subtasks reorder with up and down buttons.** There is no drag and drop.
+- **No component or screen tests.** The pure domain code is covered, and the screens are
+  checked by running the app and by the Maestro smoke flow.
+
+<p align="right"><a href="#top">Back to top</a></p>
+
+---
+
+## Roadmap
+
+- Add React Native Testing Library coverage for the task form and the list screens.
+- Add drag and drop reordering for subtasks.
+- Add an optional home screen widget for Today.
+- Add opt in sync between devices, built on the existing export format.
+
+<p align="right"><a href="#top">Back to top</a></p>
+
+---
+
+## Documentation
+
+| Document                                                                | What it covers                                                                                                                                       |
+| :---------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`docs/adr/0001-project-structure.md`](docs/adr/0001-project-structure.md) | The folder layout, feature ownership, naming rules, and the five dependency rules that ESLint enforces, plus what was deliberately not created.       |
+
+<p align="right"><a href="#top">Back to top</a></p>
+
+---
+
+## About the developer
+
+Built by **Parvej Sikdar**.
+
+- Portfolio: [agriyo.netlify.app](https://agriyo.netlify.app)
+- GitHub: [@parvej-brur](https://github.com/parvej-brur)
+
+I designed the architecture, the storage model, and the behaviour rules. I used Claude to
+scaffold repetitive UI, draft unit tests, and write this documentation. I reviewed the
+implementation and checked it with `npm run verify` before committing.
+
+<p align="right"><a href="#top">Back to top</a></p>
+
+---
+
+## License
+
+This project is a portfolio piece. The code is available for reading and reference. Please ask
+before reusing a substantial part of it in another project.
+
+<p align="right"><a href="#top">Back to top</a></p>
