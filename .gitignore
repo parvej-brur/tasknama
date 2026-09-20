@@ -40,3 +40,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# quarantined Supabase-era code: kept on this machine only, never pushed
+/legacy/

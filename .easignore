@@ -1,5 +1,6 @@
 # Exclude development and version control files
 node_modules/
+legacy/
 .git/
 .github/
 .vscode/
@@ -12,6 +13,7 @@ build/
 
 # Exclude test files
 __tests__/
+e2e/
 *.test.js
 *.test.ts
 *.test.tsx
