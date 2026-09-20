@@ -28,9 +28,10 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files — .env.example is committed as documentation, .env is not
+# local env files (Supabase URL and key live here) — only .env.example, which holds
+# placeholders, is committed
 .env
-.env*.local
+.env.*
 !.env.example
 
 # typescript
