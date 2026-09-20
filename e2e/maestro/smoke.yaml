@@ -1,0 +1,15 @@
+# Smoke test: the app starts and the four main tabs are reachable.
+# Run against a development build:  maestro test e2e/maestro/smoke.yaml
+appId: com.parvejsikdar.taskforshareviral
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Today"
+- tapOn: "Inbox"
+- assertVisible: "Inbox"
+- tapOn: "Upcoming"
+- assertVisible: "Upcoming"
+- tapOn: "Browse"
+- assertVisible: "Browse"
+- tapOn: "Today"
+- assertVisible: "Today"
