@@ -173,43 +173,10 @@ function dedupeNamed<T extends { id: string; name: string }>(
   return { items: [...byName.values()], remap, skipped };
 }
 
-// Validates and upgrades an exported file. Unreadable records are counted and
-// skipped; a file that isn't ours, or is from a newer app, is rejected whole.
-export function parseBackup(text: string): ParsedBackup {
-  let json: unknown;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    return { ok: false, error: "This file isn't valid JSON." };
-  }
-  if (!isRecord(json)) {
-    return { ok: false, error: "This file doesn't look like a Task Manager backup." };
-  }
-
-  const version = typeof json.schemaVersion === "number"
-    ? json.schemaVersion
-    : typeof json.version === "number"
-      ? json.version
-      : null;
-  if (version === null || !Number.isInteger(version) || version < 1) {
-    return { ok: false, error: "This file doesn't look like a Task Manager backup." };
-  }
-  if (version > CURRENT_SCHEMA_VERSION) {
-    return {
-      ok: false,
-      error: "This backup was made by a newer version of the app. Update the app and try again.",
-    };
-  }
-
-  let file: Raw = json;
-  for (let v = version; v < CURRENT_SCHEMA_VERSION; v += 1) {
-    file = MIGRATIONS[v](file);
-  }
-
-  if (!Array.isArray(file.tasks) && !Array.isArray(file.projects) && !Array.isArray(file.tags)) {
-    return { ok: false, error: "This backup doesn't contain any tasks, projects or tags." };
-  }
-
+// Turns untrusted `tasks` / `projects` / `tags` / `focusSessions` / `settings`
+// lists into consistent app data: unreadable records are skipped, duplicates are
+// merged and dangling links are dropped. Shared by file import and cloud restore.
+export function normalizeAppData(file: Raw): { data: AppData; skipped: number } {
   const projectsRead = readList<Project>(file.projects, coerceProject);
   const tagsRead = readList<Tag>(file.tags, coerceTag);
   const tasksRead = readList<Task>(file.tasks, coerceTask);
@@ -265,7 +232,6 @@ export function parseBackup(text: string): ParsedBackup {
     (sessionsRead.items.length - focusSessions.length);
 
   return {
-    ok: true,
     data: {
       tasks,
       projects: projects.items,
@@ -273,11 +239,56 @@ export function parseBackup(text: string): ParsedBackup {
       focusSessions,
       settings: coerceSettings(file.settings),
     },
+    skipped,
+  };
+}
+
+// Validates and upgrades an exported file. Unreadable records are counted and
+// skipped; a file that isn't ours, or is from a newer app, is rejected whole.
+export function parseBackup(text: string): ParsedBackup {
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    return { ok: false, error: "This file isn't valid JSON." };
+  }
+  if (!isRecord(json)) {
+    return { ok: false, error: "This file doesn't look like a Task Manager backup." };
+  }
+
+  const version = typeof json.schemaVersion === "number"
+    ? json.schemaVersion
+    : typeof json.version === "number"
+      ? json.version
+      : null;
+  if (version === null || !Number.isInteger(version) || version < 1) {
+    return { ok: false, error: "This file doesn't look like a Task Manager backup." };
+  }
+  if (version > CURRENT_SCHEMA_VERSION) {
+    return {
+      ok: false,
+      error: "This backup was made by a newer version of the app. Update the app and try again.",
+    };
+  }
+
+  let file: Raw = json;
+  for (let v = version; v < CURRENT_SCHEMA_VERSION; v += 1) {
+    file = MIGRATIONS[v](file);
+  }
+
+  if (!Array.isArray(file.tasks) && !Array.isArray(file.projects) && !Array.isArray(file.tags)) {
+    return { ok: false, error: "This backup doesn't contain any tasks, projects or tags." };
+  }
+
+  const { data, skipped } = normalizeAppData(file);
+  return {
+    ok: true,
+    data,
     summary: {
-      tasks: tasks.length,
-      projects: projects.items.length,
-      tags: tags.items.length,
-      focusSessions: focusSessions.length,
+      tasks: data.tasks.length,
+      projects: data.projects.length,
+      tags: data.tags.length,
+      focusSessions: data.focusSessions.length,
       skipped,
       fromVersion: version,
     },
