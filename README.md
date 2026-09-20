@@ -36,15 +36,11 @@ frame of every screen already shows real data.
 - [Key features](#key-features)
 - [Built with](#built-with)
 - [Architecture](#architecture)
-- [Project structure](#project-structure)
-- [Where each requirement lives](#where-each-requirement-lives)
 - [Engineering notes](#engineering-notes)
 - [Behaviour decisions](#behaviour-decisions)
 - [Getting started](#getting-started)
-- [Testing](#testing)
 - [Project status and scope](#project-status-and-scope)
 - [Roadmap](#roadmap)
-- [Documentation](#documentation)
 - [About the developer](#about-the-developer)
 - [License](#license)
 
@@ -71,8 +67,9 @@ demo data.
 ## About the project
 
 Task Manager is a personal task app built around one rule: the phone is the source of truth.
-There is no sign up, no sync service, and no request that can fail, so the app opens instantly
-and behaves the same on a plane as it does on Wi-Fi. The interface is organised around four
+There is no sign up, and nothing in the app waits on a request, so it opens instantly and behaves
+the same on a plane as it does on Wi-Fi. An optional cloud backup to your own Supabase project
+can be switched on with two environment variables; without them the app never touches the network. The interface is organised around four
 daily destinations, Today, Inbox, Upcoming, and Browse, and everything else sits one tap
 inside Browse.
 
@@ -109,6 +106,7 @@ storage layer that writes only what changed, and a deliberately small and honest
 | **Focus mode**            | A timer on one task, with pause, resume, and stop. It survives the app being killed, and a session that ended while closed is completed on the next launch.               |
 | **Productivity**          | Completed today and this week, the weekly completion rate, overdue count, and focus minutes.                                                                              |
 | **Backup**                | Export everything to a JSON file and import it back. Every record is validated, and older backup versions are migrated forward.                                           |
+| **Cloud backup**          | Optional. Upload a copy to your own Supabase project and restore it later. Off until you add a URL and key, and the device stays the source of truth.                    |
 | **Appearance**            | System, light, and dark themes on a cobalt and marigold palette, with defaults for reminders and focus length.                                                            |
 | **Accessibility**         | Roles and labels on every control, status carried by icon and text as well as colour, reduced motion respected, and a contrast test that fails the build on a bad pair.  |
 
@@ -173,65 +171,6 @@ src/lib/storage              typed key value backend over MMKV, one key per reco
 - **The feature boundary is enforced.** Routes reach a feature only through its `index.ts`,
   shared components never import a feature, and nothing below the route layer imports a
   screen. ESLint checks this, it is not left to discipline.
-
-<p align="right"><a href="#top">Back to top</a></p>
-
----
-
-## Project structure
-
-```
-src/
-  app/          Expo Router routes only, one line wrappers around feature screens
-  features/     Business domains: tasks, projects, tags, focus, productivity,
-                notifications, settings, backup, browse
-                each owns its types, slice, thunks, selectors, schemas,
-                components, screens, tests, and one index.ts
-  components/   Shared, feature agnostic UI (ui/ layout/ feedback/)
-  lib/          Infrastructure: storage/ (MMKV) and store/ (root store, persistence)
-  providers/    app-providers.tsx: fonts, store, navigation theme, app level effects
-  theme/        Light and dark palettes, spacing, type scale
-  hooks/        Shared hooks (debounce, clock, reduce motion)
-  utils/        Pure helpers for dates and validation
-  config/       Input limits
-  testing/      Test factories
-assets/         Icons and splash art
-docs/           Architecture decision records
-e2e/            Maestro smoke flow
-```
-
-A feature exposes a single public surface through its `index.ts`. Inside it, files are named by
-role and only the ones that are needed exist: `store.ts`, `actions.ts`, `selectors.ts`,
-`schemas.ts`, `types.ts`, plus domain modules named for what they do, such as `recurrence.ts`,
-`quick-add.ts`, and `task-views.ts`. Tests sit next to the code. Files and folders are
-kebab-case, and every import outside the current folder resolves through the `@/` alias
-rather than `../`.
-
-<p align="right"><a href="#top">Back to top</a></p>
-
----
-
-## Where each requirement lives
-
-| Area                                                                       | Code                                                                                                                                                                                                                                   |
-| :------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 Tasks (fields, validation, create, edit, complete, delete with Undo)     | [`schemas.ts`](src/features/tasks/schemas.ts), [`actions.ts`](src/features/tasks/actions.ts), [`task-form-screen.tsx`](src/features/tasks/screens/task-form-screen.tsx), [`use-task-actions.ts`](src/features/tasks/hooks/use-task-actions.ts) |
-| 2 Views (Inbox, Today dashboard, Upcoming, Completed)                      | [`task-views.ts`](src/features/tasks/task-views.ts), [`screens/`](src/features/tasks/screens)                                                                                                                                          |
-| 3 Projects (create, edit, archive, restore, delete, progress)              | [`features/projects/`](src/features/projects), [`store.ts`](src/features/projects/store.ts)                                                                                                                                            |
-| 4 Tags                                                                     | [`features/tags/`](src/features/tags), [`store.ts`](src/features/tags/store.ts)                                                                                                                                                        |
-| 5 Subtasks (add, edit, complete, delete, reorder)                          | [`subtask-list.tsx`](src/features/tasks/components/subtask-list.tsx), [`store.ts`](src/features/tasks/store.ts)                                                                                                                        |
-| 6 Search, filter, sort (250 ms debounce)                                   | `queryTasks` in [`task-query.ts`](src/features/tasks/task-query.ts), [`task-controls.tsx`](src/features/tasks/components/task-controls.tsx)                                                                                            |
-| 7 Recurring tasks                                                          | [`recurrence.ts`](src/features/tasks/recurrence.ts), [`completion.ts`](src/features/tasks/completion.ts)                                                                                                                               |
-| 8 Reminders and notifications                                              | [`features/notifications/`](src/features/notifications)                                                                                                                                                                                |
-| 9 Deep links (`taskmanager://task/<id>`)                                   | [`task/[id].tsx`](src/app/task/[id].tsx), scheme in [`app.config.ts`](app.config.ts)                                                                                                                                                   |
-| 10 Natural language quick add                                              | [`quick-add.ts`](src/features/tasks/quick-add.ts), [`quick-add-screen.tsx`](src/features/tasks/screens/quick-add-screen.tsx)                                                                                                           |
-| 11 Focus mode                                                              | [`features/focus/`](src/features/focus)                                                                                                                                                                                                |
-| 12 Productivity analytics                                                  | [`features/productivity/`](src/features/productivity)                                                                                                                                                                                  |
-| 13 Settings, export and import                                             | [`features/settings/`](src/features/settings), [`features/backup/`](src/features/backup)                                                                                                                                               |
-| 14 UI and UX                                                               | [`components/`](src/components), [`theme/`](src/theme)                                                                                                                                                                                 |
-| 15 Accessibility                                                           | [`accessibility.ts`](src/features/tasks/accessibility.ts), labels and roles throughout `components/`, contrast test in [`contrast.test.ts`](src/theme/contrast.test.ts)                                                                |
-| 16 Performance                                                             | [`task-list.tsx`](src/features/tasks/components/task-list.tsx), [`task-row.tsx`](src/features/tasks/components/task-row.tsx), [`persistence.ts`](src/lib/store/persistence.ts), [`dev-seed.ts`](src/features/settings/dev-seed.ts)      |
-| 17 Error handling                                                          | [`route-error.tsx`](src/components/feedback/route-error.tsx), [`errors.ts`](src/lib/storage/errors.ts), [`list-gate.tsx`](src/components/feedback/list-gate.tsx)                                                                        |
 
 <p align="right"><a href="#top">Back to top</a></p>
 
@@ -347,40 +286,6 @@ npx expo start
 EAS build profiles for `development`, `preview`, and `production` are in
 [`eas.json`](eas.json).
 
-### Environment
-
-None. The app makes no network calls and reads no environment variables, so there is nothing
-to configure and no secret to protect. [`.env.example`](.env.example) exists only to say so.
-
-<p align="right"><a href="#top">Back to top</a></p>
-
----
-
-## Testing
-
-Run with `npm test`: **16 suites, 350 tests**. They target the correctness critical pure
-logic, which is where bugs would actually hurt and where tests give the most signal per line.
-
-| Area                | What is pinned down                                                                                                              |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **Task queries**    | Search, filter, and sort compose in one pass, and views such as Today and Upcoming bucket tasks correctly.                        |
-| **Recurrence**      | Next occurrence for daily, weekly, monthly, and custom rules, including month end anchoring.                                     |
-| **Quick add**       | Dates, times, repeats, tags, and priorities parsed out of a sentence, and each piece switching off cleanly.                      |
-| **Reminders**       | The planner's cap and ordering, the diff into cancel and schedule calls, and the app running with notifications unavailable.     |
-| **Focus**           | The timestamp based timer, pause and resume, and a session that expired while the app was closed.                                |
-| **Backup**          | Round trips, validation of bad records, version migration, and refusing files from a newer app.                                  |
-| **Store**           | Task, project, and tag actions, Undo, and persistence: one record per key, only changed records written, corrupt ones skipped.   |
-| **Theme**           | Every text pair meets WCAG AA and no palette hue crosses the no red, green, or teal rule.                                        |
-
-The bias is toward tests that pin an invariant rather than restate an implementation, so they
-fail loudly on a regression and survive a restyle. UI tests were deliberately skipped in the
-interest of focus. A Maestro smoke flow in [`e2e/maestro/smoke.yaml`](e2e/maestro/smoke.yaml)
-checks that the app starts and the four tabs are reachable:
-
-```bash
-maestro test e2e/maestro/smoke.yaml
-```
-
 <p align="right"><a href="#top">Back to top</a></p>
 
 ---
@@ -389,8 +294,9 @@ maestro test e2e/maestro/smoke.yaml
 
 The app is complete for what it sets out to do, and a few things are deliberately left out:
 
-- **No accounts, backend, or sync.** Data lives on one device. Use export and import to move
-  it, or to keep a copy.
+- **No accounts, and no live sync.** Data lives on one device. Cloud backup is a manual upload or
+  restore of a whole copy, not a merge between devices, and it is not per user: anyone with your
+  project URL and anon key can read it. Export and import work without any backend.
 - **No collaboration, attachments, location reminders, calendar sync, or widgets.**
 - **No AI services and no gamification.**
 - **Subtasks reorder with up and down buttons.** There is no drag and drop.
@@ -406,17 +312,7 @@ The app is complete for what it sets out to do, and a few things are deliberatel
 - Add React Native Testing Library coverage for the task form and the list screens.
 - Add drag and drop reordering for subtasks.
 - Add an optional home screen widget for Today.
-- Add opt in sync between devices, built on the existing export format.
-
-<p align="right"><a href="#top">Back to top</a></p>
-
----
-
-## Documentation
-
-| Document                                                                | What it covers                                                                                                                                       |
-| :---------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`docs/adr/0001-project-structure.md`](docs/adr/0001-project-structure.md) | The folder layout, feature ownership, naming rules, and the five dependency rules that ESLint enforces, plus what was deliberately not created.       |
+- Add Supabase Auth and per-user row policies, then merge based sync between devices.
 
 <p align="right"><a href="#top">Back to top</a></p>
 
