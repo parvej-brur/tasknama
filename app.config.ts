@@ -13,12 +13,16 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: "com.parvejsikdar.taskforshareviral",
+    icon: {
+      light: "./assets/images/icon.png",
+      dark: "./assets/images/icon-dark.png",
+      tinted: "./assets/images/icon-tinted.png",
+    },
   },
   android: {
     adaptiveIcon: {
-      backgroundColor: "#183985",
+      backgroundColor: "#1B3A8F",
       foregroundImage: "./assets/images/android-icon-foreground.png",
-      backgroundImage: "./assets/images/android-icon-background.png",
       monochromeImage: "./assets/images/android-icon-monochrome.png",
     },
     edgeToEdgeEnabled: true,
@@ -35,15 +39,20 @@ const config: ExpoConfig = {
       "expo-splash-screen",
       {
         image: "./assets/images/splash-icon.png",
-        imageWidth: 200,
+        imageWidth: 280,
         resizeMode: "contain",
-        backgroundColor: "#ffffff",
+        backgroundColor: "#F4F6FA",
+        dark: {
+          image: "./assets/images/splash-icon-dark.png",
+          backgroundColor: "#0A101F",
+        },
       },
     ],
     "@react-native-community/datetimepicker",
     [
       "expo-notifications",
       {
+        icon: "./assets/images/notification-icon.png",
         color: "#2557D6",
       },
     ],
