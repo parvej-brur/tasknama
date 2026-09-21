@@ -32,6 +32,7 @@ frame of every screen already shows real data.
 <summary><strong>Table of contents</strong></summary>
 
 - [Preview](#preview)
+- [Screens](#screens)
 - [About the project](#about-the-project)
 - [Key features](#key-features)
 - [Built with](#built-with)
@@ -50,15 +51,39 @@ frame of every screen already shows real data.
 
 ## Preview
 
-<div align="center">
-  <img alt="Task Manager walkthrough" src="docs/media/preview.gif" width="320">
-</div>
+<p align="center">
+  <img src="assets/readme/preview.gif" alt="Task Manager walkthrough in an iPhone frame" width="320">
+</p>
+
+<p align="center">
+  ▶️ <strong><a href="https://github.com/parvej-brur/task-for-shareviral/raw/main/assets/readme/preview.mp4">Watch the full walkthrough (MP4)</a></strong>
+</p>
 
 The walkthrough runs through Today, Inbox, Upcoming, Browse, a task with subtasks, All tasks,
-a project, Productivity, Focus, and Settings, recorded on an iPhone 17 Pro Max simulator with
-demo data.
+a project, Productivity, Focus, and Settings. The footage and the screens below were recorded
+on an iPhone 17 Pro Max simulator with demo data, then placed inside a rendered iPhone frame.
+The frame is a mockup of the device, not a capture from real hardware.
 
-▶️ **[Watch the full walkthrough (MP4)](https://github.com/parvej-brur/task-for-shareviral/raw/main/docs/media/preview.mp4)**
+<p align="right"><a href="#top">Back to top</a></p>
+
+---
+
+## Screens
+
+<table align="center">
+  <tr>
+    <td align="center"><img src="assets/readme/screens/01-today.jpg" alt="Today dashboard with tasks left, a progress bar, and overdue, today, and high priority sections" width="260"></td>
+    <td align="center"><img src="assets/readme/screens/02-upcoming.jpg" alt="Upcoming list grouping active tasks by due date" width="260"></td>
+    <td align="center"><img src="assets/readme/screens/03-task-detail.jpg" alt="Task detail with notes, due date, project, tags, and a subtask checklist" width="260"></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="assets/readme/screens/04-project.jpg" alt="Project screen with a progress card, edit, archive, and delete actions, and its tasks" width="260"></td>
+    <td align="center"><img src="assets/readme/screens/05-productivity.jpg" alt="Productivity screen with the weekly completion rate and counts for completed, overdue, and focus sessions" width="260"></td>
+    <td align="center"><img src="assets/readme/screens/06-focus.jpg" alt="Focus screen listing tasks to pick from for a timed session" width="260"></td>
+  </tr>
+</table>
+
+Every screen shares the same design tokens, so the cards, chips, and progress bars read as one product.
 
 <p align="right"><a href="#top">Back to top</a></p>
 
