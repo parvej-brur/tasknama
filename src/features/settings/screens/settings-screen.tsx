@@ -246,7 +246,7 @@ export function SettingsScreen() {
       ) : null}
 
       <Text style={[t.type.caption, { color: t.palette.textMuted, textAlign: "center" }]}>
-        Task Manager {Constants.expoConfig?.version ?? ""}
+        TaskNama {Constants.expoConfig?.version ?? ""}
       </Text>
     </Screen>
   );

@@ -10,7 +10,7 @@ import { coerceTask } from "@/features/tasks/schemas";
 import type { Task } from "@/features/tasks/types";
 import { dateKeyOfInstant, toTimeKey } from "@/utils/date";
 
-export const APP_ID = "taskmanager";
+export const APP_ID = "tasknama";
 export const CURRENT_SCHEMA_VERSION = 2;
 
 export type AppData = {
@@ -253,7 +253,7 @@ export function parseBackup(text: string): ParsedBackup {
     return { ok: false, error: "This file isn't valid JSON." };
   }
   if (!isRecord(json)) {
-    return { ok: false, error: "This file doesn't look like a Task Manager backup." };
+    return { ok: false, error: "This file doesn't look like a TaskNama backup." };
   }
 
   const version = typeof json.schemaVersion === "number"
@@ -262,7 +262,7 @@ export function parseBackup(text: string): ParsedBackup {
       ? json.version
       : null;
   if (version === null || !Number.isInteger(version) || version < 1) {
-    return { ok: false, error: "This file doesn't look like a Task Manager backup." };
+    return { ok: false, error: "This file doesn't look like a TaskNama backup." };
   }
   if (version > CURRENT_SCHEMA_VERSION) {
     return {

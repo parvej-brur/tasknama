@@ -1,4 +1,4 @@
--- Task Manager: cloud backup schema.
+-- TaskNama: cloud backup schema.
 --
 -- Run this once in the Supabase SQL editor (Project -> SQL Editor). It is safe to
 -- re-run: tables and policies are only created when missing, and no data is

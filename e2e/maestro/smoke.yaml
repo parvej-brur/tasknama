@@ -1,6 +1,6 @@
 # Smoke test: the app starts and the four main tabs are reachable.
 # Run against a development build:  maestro test e2e/maestro/smoke.yaml
-appId: com.parvejsikdar.taskforshareviral
+appId: com.parvejsikdar.tasknama
 ---
 - launchApp:
     clearState: true

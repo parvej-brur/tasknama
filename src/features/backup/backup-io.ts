@@ -11,7 +11,7 @@ export async function exportBackup(data: AppData, now: Date = new Date()): Promi
   if (!(await Sharing.isAvailableAsync())) {
     throw new Error("Sharing isn't available on this device.");
   }
-  const file = new File(Paths.cache, `task-manager-${toDateKey(now)}.json`);
+  const file = new File(Paths.cache, `tasknama-${toDateKey(now)}.json`);
   file.create({ overwrite: true });
   file.write(JSON.stringify(buildBackup(data, now), null, 2));
   await Sharing.shareAsync(file.uri, {

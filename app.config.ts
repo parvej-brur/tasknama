@@ -1,18 +1,18 @@
 import type { ExpoConfig } from "expo/config";
 
 const config: ExpoConfig = {
-  name: "TaskManager",
-  slug: "task-for-shareviral",
+  name: "TaskNama",
+  slug: "tasknama",
   version: "2.1.0",
   orientation: "portrait",
   owner: "parvejsikdar",
   icon: "./assets/images/icon.png",
-  scheme: "taskmanager",
+  scheme: "tasknama",
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
-    bundleIdentifier: "com.parvejsikdar.taskforshareviral",
+    bundleIdentifier: "com.parvejsikdar.tasknama",
     icon: {
       light: "./assets/images/icon.png",
       dark: "./assets/images/icon-dark.png",
@@ -27,7 +27,7 @@ const config: ExpoConfig = {
     },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
-    package: "com.parvejsikdar.taskforshareviral",
+    package: "com.parvejsikdar.tasknama",
   },
   web: {
     output: "static",

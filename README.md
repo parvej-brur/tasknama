@@ -2,11 +2,11 @@
 
 <div align="center">
 
-# ✅ Task Manager
+# ✅ TaskNama
 
 ### A local first task manager that works fully offline
 
-Task Manager is a mobile app for planning your day without an account, a backend, or a network
+TaskNama is a mobile app for planning your day without an account, a backend, or a network
 connection. Capture a task in one sentence, sort it into projects and tags, break it into
 subtasks, set reminders and repeats, and run a focus session on whatever is next. Everything is
 stored on the device, so data survives a restart, a background kill, and a reboot, and the first
@@ -52,11 +52,11 @@ frame of every screen already shows real data.
 ## Preview
 
 <p align="center">
-  <img src="assets/readme/preview.gif" alt="Task Manager walkthrough in an iPhone frame" width="320">
+  <img src="assets/readme/preview.gif" alt="TaskNama walkthrough in an iPhone frame" width="320">
 </p>
 
 <p align="center">
-  ▶️ <strong><a href="https://github.com/parvej-brur/task-for-shareviral/raw/main/assets/readme/preview.mp4">Watch the full walkthrough (MP4)</a></strong>
+  ▶️ <strong><a href="https://github.com/parvej-brur/tasknama/raw/main/assets/readme/preview.mp4">Watch the full walkthrough (MP4)</a></strong>
 </p>
 
 The walkthrough runs through Today, Inbox, Upcoming, Browse, a task with subtasks, All tasks,
@@ -91,7 +91,7 @@ Every screen shares the same design tokens, so the cards, chips, and progress ba
 
 ## About the project
 
-Task Manager is a personal task app built around one rule: the phone is the source of truth.
+TaskNama is a personal task app built around one rule: the phone is the source of truth.
 There is no sign up, and nothing in the app waits on a request, so it opens instantly and behaves
 the same on a plane as it does on Wi-Fi. An optional cloud backup to your own Supabase project
 can be switched on with two environment variables; without them the app never touches the network. The interface is organised around four
@@ -127,7 +127,7 @@ storage layer that writes only what changed, and a deliberately small and honest
 | **Recurring tasks**       | Daily, weekly on chosen days, monthly on a day, or every N days, weeks, or months. Completing one creates the next occurrence.                                            |
 | **Reminders**             | At due time, 10 minutes, 1 hour, or 1 day before, or a custom moment. Scheduled locally, with permission asked when the first reminder is set.                            |
 | **Quick add**             | Type "call Sam every friday at 5pm #work !high" and the date, time, repeat, tag, and priority are pulled out live. Each piece can be switched off before saving.          |
-| **Deep links**            | `taskmanager://task/<id>` opens a task, and tapping a reminder notification lands on the same screen.                                                                     |
+| **Deep links**            | `tasknama://task/<id>` opens a task, and tapping a reminder notification lands on the same screen.                                                                     |
 | **Focus mode**            | A timer on one task, with pause, resume, and stop. It survives the app being killed, and a session that ended while closed is completed on the next launch.               |
 | **Productivity**          | Completed today and this week, the weekly completion rate, overdue count, and focus minutes.                                                                              |
 | **Backup**                | Export everything to a JSON file and import it back. Every record is validated, and older backup versions are migrated forward.                                           |
@@ -269,8 +269,8 @@ MMKV, notifications, the date picker, and the document picker are native modules
 runs in a **development build**, not Expo Go.
 
 ```bash
-git clone https://github.com/parvej-brur/task-for-shareviral.git
-cd task-for-shareviral
+git clone https://github.com/parvej-brur/tasknama.git
+cd tasknama
 npm install
 npx expo run:ios       # or: npx expo run:android
 ```

@@ -222,7 +222,7 @@ export function BrowseScreen() {
         <View style={{ height: t.spacing.lg }} />
         <ListRow icon="settings-outline" tint="slate" title="Settings" subtitle="Appearance, reminders and your data" onPress={() => router.push("/settings")} />
         <Text style={[t.type.caption, { color: t.palette.textMuted, textAlign: "center", marginTop: t.spacing.lg }]}>
-          Task Manager {Constants.expoConfig?.version ?? ""} · Your data stays on this device
+          TaskNama {Constants.expoConfig?.version ?? ""} · Your data stays on this device
         </Text>
       </ScrollView>
     </View>
